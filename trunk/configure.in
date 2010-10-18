@@ -1,0 +1,35 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_INIT(libsync, 0.1, Aigui.Liu@gmail.com)
+
+AM_INIT_AUTOMAKE()
+AM_CONFIG_HEADER(config.h)
+AC_CONFIG_SRCDIR([libsync])
+AC_PROG_LIBTOOL
+AC_PROG_CC
+AM_PROG_CC_C_O
+
+CPPFLAGS="$CPPFLAGS  -D_FILE_OFFSET_BITS=64"
+
+# Checks for header files.
+AC_HEADER_STDC
+AC_HEADER_SYS_WAIT
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_HEADER_TIME
+AC_STRUCT_TM
+AC_HEADER_STDBOOL
+
+# Checks for library functions.
+AC_FUNC_FORK
+AC_FUNC_MKTIME
+AC_FUNC_SELECT_ARGTYPES
+AC_TYPE_SIGNAL
+AC_FUNC_STRFTIME
+AC_FUNC_STRTOD
+
+AC_OUTPUT([Makefile libsync/Makefile])
