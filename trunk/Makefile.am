@@ -1,2 +1,0 @@
-SUBDIRS = . libsync
-all-am:
