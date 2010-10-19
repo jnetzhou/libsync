@@ -11,9 +11,13 @@ libsync.so:
 
 synctest:
 	gcc -o synctest synctest.c -L. -lsync
+
 install:
 	cp -rf libsync.* /usr/local/lib/
 	ln -sf /usr/local/lib/libsync.so  /usr/local/lib/libsync.so.1
+
+uninstall:
+	rm -rf /usr/local/lib/libsync.*
 
 clean: 
 	$(RM) -rf *.o  libsync.a libsync.so synctest
