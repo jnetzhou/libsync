@@ -1,10 +1,8 @@
 /*
-  Copyright (C) 2010, Aigui Liu
+  Copyright (C) 2010-2012, Aigui Liu
                                                                                                    
   Filename: sync.h
   Author: Aigui.Liu@gmail.com
-  Date: 2010-07-30
-  Last modified: 2010-08-05
  */
 
 #ifndef _SYNC_H
