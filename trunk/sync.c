@@ -8,6 +8,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include "md5.h"
 #include "adler32.h"
@@ -75,6 +77,7 @@ static int file_chunk_cdc(int fd_src, int fd_chunk, chunk_file_header *chunk_fil
 	char buf[BUF_MAX_SZ] = {0};
 	char block_buf[BLOCK_MAX_SZ] = {0};
 	char win_buf[BLOCK_WIN_SZ + 1] = {0};
+	char adler_pre_char;
 	unsigned char md5_checksum[16 + 1] = {0};
 	unsigned char csum[10 + 1] = {0};
 	unsigned int bpos = 0;
@@ -104,7 +107,7 @@ static int file_chunk_cdc(int fd_src, int fd_chunk, chunk_file_header *chunk_fil
 
 		while ((head + BLOCK_WIN_SZ) <= tail) {
 			memcpy(win_buf, buf + head, BLOCK_WIN_SZ);
-			hkey = (block_sz == (BLOCK_MIN_SZ - BLOCK_WIN_SZ)) ? adler32_checksum(win_buf, BLOCK_WIN_SZ) :
+			hkey = (block_sz == (BLOCK_MIN_SZ - BLOCK_WIN_SZ) || head == 0) ? adler32_checksum(win_buf, BLOCK_WIN_SZ) :
 				adler32_rolling_checksum(hkey, BLOCK_WIN_SZ, buf[head-1], buf[head+BLOCK_WIN_SZ-1]);
 
 			/* get a normal chunk, write block info to chunk file */
@@ -153,11 +156,13 @@ static int file_chunk_cdc(int fd_src, int fd_chunk, chunk_file_header *chunk_fil
 				head = ((tail - head) > (BLOCK_MIN_SZ - BLOCK_WIN_SZ)) ?
 					head + (BLOCK_MIN_SZ - BLOCK_WIN_SZ) : tail;
 			}
+			adler_pre_char = buf[head - 1];
 		}
 
 		/* read expected data from file to full up buf */
 		bpos = tail - head;
 		exp_rwsize = BUF_MAX_SZ - bpos;
+		adler_pre_char = buf[head - 1];
 		memmove(buf, buf + head, bpos);
 	}
 
@@ -256,7 +261,7 @@ static int delta_block_process(hashtable *htab_md5, hashtable *htab_csum, int fd
 	}
 
 	delta_bentry.embeded = (chunk_bentry == NULL) ? 1 : 0;
-	delta_bentry.offset = (chunk_bentry == NULL) ? offset: chunk_bentry->offset;
+	delta_bentry.offset = (chunk_bentry == NULL) ? *offset: chunk_bentry->offset;
 	delta_bentry.len = block_sz;
 
 	/* write delta block entry*/
@@ -318,6 +323,7 @@ static int file_delta_cdc(hashtable *htab_md5, hashtable *htab_csum, int fd_src,
 	char buf[BUF_MAX_SZ] = {0};
 	char block_buf[BLOCK_MAX_SZ] = {0};
 	char win_buf[BLOCK_WIN_SZ + 1] = {0};
+	char adler_pre_char;
 	unsigned int bpos = 0;
 	unsigned int rwsize = 0;
 	unsigned int exp_rwsize = BUF_MAX_SZ;
@@ -347,7 +353,7 @@ static int file_delta_cdc(hashtable *htab_md5, hashtable *htab_csum, int fd_src,
 
 		while ((head + BLOCK_WIN_SZ) <= tail) {
 			memcpy(win_buf, buf + head, BLOCK_WIN_SZ);
-			hkey = (block_sz == (BLOCK_MIN_SZ - BLOCK_WIN_SZ)) ? adler32_checksum(win_buf, BLOCK_WIN_SZ) :
+			hkey = (block_sz == (BLOCK_MIN_SZ - BLOCK_WIN_SZ) || head == 0) ? adler32_checksum(win_buf, BLOCK_WIN_SZ) :
 				adler32_rolling_checksum(hkey, BLOCK_WIN_SZ, buf[head-1], buf[head+BLOCK_WIN_SZ-1]);
 
 			/* get a normal chunk, write block info to delta file */
@@ -380,11 +386,13 @@ static int file_delta_cdc(hashtable *htab_md5, hashtable *htab_csum, int fd_src,
 				head = ((tail - head) > (BLOCK_MIN_SZ - BLOCK_WIN_SZ)) ?
 					head + (BLOCK_MIN_SZ - BLOCK_WIN_SZ) : tail;
 			}
+			adler_pre_char = buf[head - 1];
 		}
 
 		/* read expected data from file to full up buf */
 		bpos = tail - head;
 		exp_rwsize = BUF_MAX_SZ - bpos;
+		adler_pre_char = buf[head - 1];
 		memmove(buf, buf + head, bpos);
 	}
 
@@ -635,9 +643,9 @@ int file_sync(char *src_filename, char *delta_filename)
 	int i, ret = 0;
 	delta_file_header delta_file_hdr;
 	delta_block_entry delta_bentry;
-	char buf[BLOCK_MAX_SZ] = {0};
 	char tmpname[NAME_MAX_SZ] = {0};
-	char template[] = "wsio_XXXXXX";
+	char template[] = "libsync_XXXXXX";
+	char buf[BUF_MAX_SZ] = {0};
 
 	fd_src = open(src_filename, O_RDONLY);
 	if (fd_src == -1)
@@ -700,7 +708,6 @@ int file_sync(char *src_filename, char *delta_filename)
 			}
 		}
 	}
-
 	/* write last block */
 	if (-1 == lseek(fd_delta, delta_file_hdr.last_block_offset, SEEK_SET)) {
 		ret = -1;
@@ -717,7 +724,6 @@ int file_sync(char *src_filename, char *delta_filename)
 	if (rwsize == -1 || rwsize != delta_file_hdr.last_block_sz) 
 		ret = -1;
 	
-
 _FILE_SYNC_EXIT:
 	close(fd_src);
 	close(fd_delta);
