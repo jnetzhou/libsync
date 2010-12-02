@@ -107,8 +107,8 @@ static int file_chunk_cdc(int fd_src, int fd_chunk, chunk_file_header *chunk_fil
 
 		while ((head + BLOCK_WIN_SZ) <= tail) {
 			memcpy(win_buf, buf + head, BLOCK_WIN_SZ);
-			hkey = (block_sz == (BLOCK_MIN_SZ - BLOCK_WIN_SZ) || head == 0) ? adler32_checksum(win_buf, BLOCK_WIN_SZ) :
-				adler32_rolling_checksum(hkey, BLOCK_WIN_SZ, buf[head-1], buf[head+BLOCK_WIN_SZ-1]);
+			hkey = (block_sz == (BLOCK_MIN_SZ - BLOCK_WIN_SZ)) ? adler32_checksum(win_buf, BLOCK_WIN_SZ) :
+				adler32_rolling_checksum(hkey, BLOCK_WIN_SZ, adler_pre_char, buf[head+BLOCK_WIN_SZ-1]);
 
 			/* get a normal chunk, write block info to chunk file */
 			if ((hkey % BLOCK_SZ) == CHUNK_CDC_R) {
@@ -353,8 +353,8 @@ static int file_delta_cdc(hashtable *htab_md5, hashtable *htab_csum, int fd_src,
 
 		while ((head + BLOCK_WIN_SZ) <= tail) {
 			memcpy(win_buf, buf + head, BLOCK_WIN_SZ);
-			hkey = (block_sz == (BLOCK_MIN_SZ - BLOCK_WIN_SZ) || head == 0) ? adler32_checksum(win_buf, BLOCK_WIN_SZ) :
-				adler32_rolling_checksum(hkey, BLOCK_WIN_SZ, buf[head-1], buf[head+BLOCK_WIN_SZ-1]);
+			hkey = (block_sz == (BLOCK_MIN_SZ - BLOCK_WIN_SZ)) ? adler32_checksum(win_buf, BLOCK_WIN_SZ) :
+				adler32_rolling_checksum(hkey, BLOCK_WIN_SZ, adler_pre_char, buf[head+BLOCK_WIN_SZ-1]);
 
 			/* get a normal chunk, write block info to delta file */
 			if ((hkey % BLOCK_SZ) == CHUNK_CDC_R) {
